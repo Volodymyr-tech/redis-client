@@ -1,6 +1,8 @@
 import json
 import os
 import asyncio
+
+import redis
 from redis.asyncio import Redis
 
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
@@ -42,6 +44,23 @@ class CustomRedis(Redis):
         except Exception as e:
             return f"An error occurs: {e}"
 
+
+    async def set_cache_json(self, key:str, data: json):
+        try:
+            await self.set(key, json.dumps(data))
+        except Exception as e:
+            return f"An error occurs: {e}"
+
+
+    async def get_cache_json(self, key:str):
+        try:
+            value = await self.get(key)
+            return json.loads(value)
+        except redis.exceptions.ConnectionError as e:
+            print(e)
+            return None
+
+
     async def delete_key(self, key: str):
         await self.delete(key)
         print(f"Key {key} deleted")
@@ -60,11 +79,12 @@ class CustomRedis(Redis):
 async def main():
     redis_client = CustomRedis()
 
-    print(await redis_client())
+    await redis_client.set_cache_json("chacne:1", data_json)
 
-    await redis_client.delete_keys_by_prefix("test")
-
-    await redis_client.aclose()
+    res = await redis_client.get_cache_json("chacne:1")
+    print(res)
+    for r in res:
+        print(r)
 
 
 if __name__ == "__main__":
